@@ -1,0 +1,517 @@
+<!doctype html>
+<html lang="id">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <meta name="theme-color" content="#494c9e" />
+    <meta
+      name="description"
+      content="Rencanakan ketergantungan tugas, temukan jalur kritis, dan simulasikan durasi proyek."
+    />
+    <title>JalurProyek · Lihat alurnya, tentukan prioritasnya</title>
+    <link rel="icon" href="./icon.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="./styles.css" />
+    <script type="module" src="./app.mjs"></script>
+  </head>
+  <body>
+    <header class="app-header">
+      <a href="./" class="brand"
+        ><img src="./icon.svg" width="38" height="38" alt="" /><span
+          >JalurProyek<small>LIHAT ALURNYA. TENTUKAN PRIORITASNYA.</small></span
+        ></a
+      ><span class="local-state" id="local-state">Lokal · tanpa akun</span
+      ><button class="button quiet" id="help-button" type="button">
+        Panduan CPM <span aria-hidden="true">?</span>
+      </button>
+    </header>
+    <main class="shell">
+      <div class="alert" id="storage-alert" role="alert" hidden>
+        <strong>Data lokal belum dapat dibuka</strong>
+        <p id="storage-alert-text"></p>
+        <div class="toolbar">
+          <button class="button" id="raw-backup" type="button">
+            Unduh data mentah</button
+          ><button class="button" id="retry-load" type="button">
+            Coba muat ulang</button
+          ><button class="button danger" id="reset-storage" type="button">
+            Reset data lokal
+          </button>
+        </div>
+      </div>
+      <div class="alert slim" id="external-change" role="status" hidden>
+        Data berubah di tab lain. Simpan isian yang masih diperlukan sebelum
+        memuat ulang.
+        <button class="link-button" id="reload-project" type="button">
+          Muat ulang data
+        </button>
+      </div>
+      <div class="project-heading">
+        <div>
+          <div class="eyebrow">RUANG RENCANA / JAM KERJA</div>
+          <div class="title-line">
+            <h1 id="project-title">Rencana proyek baru</h1>
+            <button
+              class="icon-button"
+              id="rename-project"
+              type="button"
+              aria-label="Ubah nama proyek"
+            >
+              ✎
+            </button>
+          </div>
+          <p>
+            Susun tugas yang saling bergantung. Lihat mana yang menentukan waktu
+            selesai.
+          </p>
+        </div>
+        <div class="toolbar">
+          <button class="button" type="button" id="example-button">
+            Muat contoh</button
+          ><button class="button" type="button" id="import-button">
+            Impor JSON</button
+          ><button class="button" type="button" id="backup-button">
+            ↓ Backup JSON
+          </button>
+        </div>
+      </div>
+
+      <div class="workspace">
+        <aside class="task-panel panel" aria-labelledby="task-list-title">
+          <div class="panel-heading">
+            <div>
+              <div class="eyebrow">BANGUN RENCANAMU</div>
+              <h2 id="task-list-title">Daftar tugas</h2>
+            </div>
+            <button
+              class="add-button"
+              id="add-task"
+              type="button"
+              aria-label="Tambah tugas"
+            >
+              +
+            </button>
+          </div>
+          <div class="task-count" id="task-count">0 / 40 tugas</div>
+          <div id="task-list" class="task-list"></div>
+          <div class="task-empty" id="task-empty">
+            <span class="empty-mark" aria-hidden="true">01</span>
+            <h3>Mulai dari satu tugas.</h3>
+            <p>
+              Beri nama, tentukan durasi, lalu hubungkan dengan prasyaratnya.
+            </p>
+            <button class="button primary" id="start-example" type="button">
+              Coba rencana contoh</button
+            ><small>Contoh sintetis untuk belajar alur CPM.</small>
+          </div>
+          <div class="sidebar-note">
+            <span aria-hidden="true">i</span>
+            <p>
+              Jam adalah satuan durasi kerja. Model mengizinkan tugas berjalan
+              paralel jika prasyaratnya selesai.
+            </p>
+          </div>
+        </aside>
+
+        <div class="main-column">
+          <section class="plan-summary" aria-label="Ringkasan perhitungan">
+            <div class="duration-block">
+              <span>Durasi minimum model</span>
+              <div><strong id="project-duration">0</strong><b>jam</b></div>
+            </div>
+            <div class="summary-note">
+              <strong id="critical-summary">Belum ada tugas</strong>
+              <p id="plan-description">
+                Tambahkan tugas atau muat contoh untuk memulai.
+              </p>
+            </div>
+            <div class="plan-valid" id="plan-valid"><i></i> Rencana valid</div>
+          </section>
+
+          <section class="panel visual-panel" aria-labelledby="visual-title">
+            <div class="visual-heading">
+              <div>
+                <div class="eyebrow">DARI KETERGANTUNGAN KE WAKTU</div>
+                <h2 id="visual-title">Peta rencana</h2>
+              </div>
+              <div class="toolbar">
+                <div
+                  class="segmented"
+                  role="group"
+                  aria-label="Jenis visualisasi"
+                >
+                  <button
+                    class="active"
+                    id="timeline-button"
+                    type="button"
+                    aria-pressed="true"
+                  >
+                    Timeline</button
+                  ><button id="graph-button" type="button" aria-pressed="false">
+                    Graf tugas
+                  </button>
+                </div>
+                <button class="button compact" id="svg-button" type="button">
+                  Unduh SVG
+                </button>
+              </div>
+            </div>
+            <div class="visual-legend">
+              <span><i class="critical-swatch"></i> Tugas kritis</span
+              ><span><i class="normal-swatch"></i> Tugas lain</span
+              ><span><i class="slack-swatch"></i> Kelonggaran waktu</span
+              ><small>Klik tugas untuk melihat rinciannya</small>
+            </div>
+            <div class="diagram" id="diagram"></div>
+            <div class="diagram-empty" id="diagram-empty">
+              <img src="./icon.svg" alt="" width="58" height="58" />
+              <h3>Alur proyek akan terlihat di sini.</h3>
+              <p>
+                Timeline menunjukkan waktu paling awal. Graf memperlihatkan
+                urutan prasyarat.
+              </p>
+            </div>
+            <div class="visual-footer">
+              <span id="diagram-hint"
+                >Geser mendatar bila diagram lebih lebar dari layar.</span
+              ><span id="edge-count">0 hubungan</span>
+            </div>
+          </section>
+
+          <div class="analysis-grid">
+            <section class="panel detail-panel" aria-labelledby="detail-title">
+              <div class="panel-heading">
+                <div>
+                  <div class="eyebrow">PAHAMI POSISI TUGAS</div>
+                  <h2 id="detail-title">Rincian waktu</h2>
+                </div>
+                <div class="toolbar small-gap">
+                  <button class="link-button" id="edit-task" type="button">
+                    Ubah</button
+                  ><button
+                    class="link-button danger"
+                    id="delete-task"
+                    type="button"
+                  >
+                    Hapus
+                  </button>
+                </div>
+              </div>
+              <label for="selected-task" class="visually-hidden"
+                >Tugas yang dipilih</label
+              ><select id="selected-task"></select>
+              <div class="timing-grid">
+                <div>
+                  <span>Mulai paling awal</span
+                  ><strong id="detail-es">—</strong>
+                </div>
+                <div>
+                  <span>Selesai paling awal</span
+                  ><strong id="detail-ef">—</strong>
+                </div>
+                <div>
+                  <span>Mulai paling lambat</span
+                  ><strong id="detail-ls">—</strong>
+                </div>
+                <div>
+                  <span>Kelonggaran</span><strong id="detail-slack">—</strong>
+                </div>
+              </div>
+              <p class="detail-explanation" id="detail-explanation">
+                Pilih sebuah tugas untuk melihat waktu dan kelonggarannya.
+              </p>
+              <p class="dependency-copy" id="dependency-copy"></p>
+            </section>
+
+            <section
+              class="panel simulation-panel"
+              aria-labelledby="simulation-title"
+            >
+              <div class="panel-heading">
+                <div>
+                  <div class="eyebrow">COBA SEBELUM MENGUBAH</div>
+                  <h2 id="simulation-title">Simulasi durasi</h2>
+                </div>
+                <span class="badge">Tidak langsung disimpan</span>
+              </div>
+              <p class="simulation-intro" id="simulation-task">
+                Pilih tugas dari rincian waktu.
+              </p>
+              <div class="simulation-form">
+                <div>
+                  <label for="simulation-duration">Durasi tugas baru</label>
+                  <div class="input-unit">
+                    <input
+                      type="number"
+                      id="simulation-duration"
+                      min="1"
+                      max="720"
+                      step="1"
+                      aria-describedby="simulation-result"
+                    /><span>jam</span>
+                  </div>
+                </div>
+                <div class="simulation-result">
+                  <span>Total proyek</span
+                  ><strong id="simulation-total">—</strong>
+                </div>
+              </div>
+              <p
+                id="simulation-result"
+                class="simulation-feedback"
+                aria-live="polite"
+              >
+                Hasil simulasi akan muncul setelah ada tugas.
+              </p>
+              <button class="button full" type="button" id="apply-simulation">
+                Terapkan ke rencana
+              </button>
+            </section>
+          </div>
+
+          <section class="critical-strip" aria-labelledby="critical-title">
+            <div>
+              <span class="route-symbol" aria-hidden="true">↳</span>
+              <div>
+                <h2 id="critical-title">Satu jalur kritis</h2>
+                <p>
+                  Jalur saksi; bisa ada jalur kritis lain dengan durasi sama.
+                </p>
+              </div>
+            </div>
+            <div id="critical-path" class="critical-path">Belum ada tugas.</div>
+          </section>
+        </div>
+      </div>
+      <footer class="page-footer">
+        <span>JalurProyek <small>/ 1.0</small></span>
+        <p>
+          Estimasi berdasarkan durasi dan prasyarat, tanpa batas tenaga kerja
+          atau kalender. Unduh backup untuk memindahkan rencana.
+        </p>
+        <span id="save-state">Siap menyusun rencana.</span>
+      </footer>
+    </main>
+
+    <dialog id="task-dialog" aria-labelledby="task-dialog-title">
+      <div class="dialog-heading">
+        <div>
+          <div class="eyebrow">SATU LANGKAH DALAM PROYEK</div>
+          <h2 id="task-dialog-title">Tambah tugas</h2>
+        </div>
+        <button
+          class="close-button"
+          data-close
+          type="button"
+          aria-label="Tutup form tugas"
+        >
+          ×
+        </button>
+      </div>
+      <form id="task-form">
+        <label for="task-name">Nama tugas</label
+        ><input
+          id="task-name"
+          maxlength="80"
+          placeholder="Misalnya: Uji integrasi"
+          required
+        /><label for="task-duration">Durasi (jam kerja)</label
+        ><input
+          id="task-duration"
+          type="number"
+          min="1"
+          max="720"
+          step="1"
+          value="1"
+          required
+        />
+        <p class="field-hint">
+          Bilangan bulat 1–720 jam; tidak termasuk akhir pekan atau jam
+          kalender.
+        </p>
+        <div class="prerequisite-heading">
+          <h3>Harus menunggu tugas apa?</h3>
+          <span>Opsional</span>
+        </div>
+        <p class="field-hint">
+          Centang prasyarat yang harus selesai sebelum tugas ini dimulai.
+        </p>
+        <div id="prerequisite-list" class="prerequisite-list"></div>
+        <p id="no-prerequisites" class="subtle">
+          Belum ada tugas lain yang bisa dipilih.
+        </p>
+        <p class="form-error" id="task-error" role="alert" hidden></p>
+        <div class="dialog-footer">
+          <button class="button" data-close type="button">Batal</button
+          ><button class="button primary" type="submit">Simpan tugas</button>
+        </div>
+      </form>
+    </dialog>
+
+    <dialog
+      id="project-dialog"
+      class="narrow-dialog"
+      aria-labelledby="rename-title"
+    >
+      <div class="dialog-heading">
+        <h2 id="rename-title">Nama proyek</h2>
+        <button
+          class="close-button"
+          data-close
+          type="button"
+          aria-label="Tutup nama proyek"
+        >
+          ×
+        </button>
+      </div>
+      <form id="rename-form">
+        <label for="project-name-input">Nama rencana</label
+        ><input id="project-name-input" maxlength="80" required />
+        <p class="form-error" id="rename-error" role="alert" hidden></p>
+        <div class="dialog-footer">
+          <button class="button primary" type="submit">Simpan nama</button>
+        </div>
+      </form>
+    </dialog>
+
+    <dialog id="import-dialog" aria-labelledby="import-title">
+      <div class="dialog-heading">
+        <div>
+          <div class="eyebrow">LANJUTKAN RENCANA DARI BACKUP</div>
+          <h2 id="import-title">Impor JSON proyek</h2>
+        </div>
+        <button
+          class="close-button"
+          data-close
+          type="button"
+          aria-label="Tutup impor"
+        >
+          ×
+        </button>
+      </div>
+      <p class="subtle">
+        Buka backup JSON di editor teks, salin seluruh isinya, lalu tempel di
+        sini. Impor menggantikan rencana aktif; unduh backup lama jika masih
+        diperlukan.
+      </p>
+      <form id="import-form">
+        <label for="import-text">Isi JSON proyek</label
+        ><textarea
+          id="import-text"
+          rows="11"
+          maxlength="256000"
+          spellcheck="false"
+          placeholder='{"schemaVersion":1,"title":"Proyek saya","tasks":[]}'
+          required
+        ></textarea>
+        <p class="field-hint">
+          Maksimal 256.000 byte. Prasyarat, durasi, versi, dan siklus diperiksa
+          sebelum data diganti.
+        </p>
+        <p class="form-error" id="import-error" role="alert" hidden></p>
+        <div class="dialog-footer">
+          <button class="button" data-close type="button">Batal</button
+          ><button class="button primary" type="submit">
+            Periksa dan impor
+          </button>
+        </div>
+      </form>
+    </dialog>
+
+    <dialog
+      id="confirm-dialog"
+      class="narrow-dialog"
+      aria-labelledby="confirm-title"
+    >
+      <div class="dialog-heading">
+        <h2 id="confirm-title"></h2>
+        <button
+          class="close-button"
+          data-close
+          type="button"
+          aria-label="Tutup konfirmasi"
+        >
+          ×
+        </button>
+      </div>
+      <p id="confirm-description" class="subtle"></p>
+      <p class="form-error" id="confirm-error" role="alert" hidden></p>
+      <div class="dialog-footer">
+        <button class="button" data-close type="button">Batal</button
+        ><button class="button primary" type="button" id="confirm-action">
+          Lanjutkan
+        </button>
+      </div>
+    </dialog>
+
+    <dialog id="help-dialog" aria-labelledby="help-title">
+      <div class="dialog-heading">
+        <div>
+          <div class="eyebrow">CRITICAL PATH METHOD</div>
+          <h2 id="help-title">Baca alur, bukan sekadar daftar.</h2>
+        </div>
+        <button
+          class="close-button"
+          data-close
+          type="button"
+          aria-label="Tutup panduan"
+        >
+          ×
+        </button>
+      </div>
+      <ol class="help-steps">
+        <li>
+          <strong>Tentukan tugas dan durasinya.</strong>
+          <p>
+            Semua durasi memakai jam kerja bulat. Contohnya 4 jam, bukan waktu
+            mulai pukul 04.00.
+          </p>
+        </li>
+        <li>
+          <strong>Hubungkan prasyarat.</strong>
+          <p>
+            Jika Uji integrasi menunggu Bangun fitur, centang Bangun fitur pada
+            form Uji integrasi.
+          </p>
+        </li>
+        <li>
+          <strong>Perhatikan tugas berwarna tembaga.</strong>
+          <p>
+            Tugas kritis memiliki kelonggaran nol. Penundaannya menunda waktu
+            selesai dalam model ini.
+          </p>
+        </li>
+        <li>
+          <strong>Simulasikan satu perubahan.</strong>
+          <p>
+            Mempercepat tugas belum tentu mempercepat proyek sebesar durasi yang
+            dipotong. Jalur lain bisa menjadi pembatas baru.
+          </p>
+        </li>
+      </ol>
+      <div class="help-example">
+        <strong>Awal, akhir, dan kelonggaran</strong>
+        <p>
+          Mulai paling awal mengikuti selesai seluruh prasyarat. Mulai paling
+          lambat adalah batas penundaan tanpa mengubah waktu selesai proyek.
+          Selisih keduanya adalah kelonggaran.
+        </p>
+      </div>
+      <p class="subtle help-limit">
+        Model mengizinkan pekerjaan paralel tanpa batas sumber daya. Ini bukan
+        jadwal penugasan orang atau kalender. Jika terdapat beberapa jalur
+        kritis, satu jalur saksi ditampilkan; semua tugas kritis tetap ditandai.
+      </p>
+      <div class="dialog-footer">
+        <button class="button primary" data-close type="button">
+          Mengerti
+        </button>
+      </div>
+    </dialog>
+    <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
+    <noscript
+      ><p class="alert">
+        Aktifkan JavaScript untuk menggunakan JalurProyek.
+      </p></noscript
+    >
+  </body>
+</html>
