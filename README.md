@@ -1,5 +1,10 @@
 # JalurProyek
 
+**[Coba langsung di browser](https://mavianza-lab.amav1305.chatgpt.site/coba/jalurproyek/)** · [Galeri Mavianza Lab](https://mavianza-lab.amav1305.chatgpt.site/)
+
+Versi online dapat dipakai tanpa instalasi atau akun. Data tersimpan di browser dan domain yang dipakai; gunakan backup JSON untuk memindahkan data dari versi lokal.
+
+
 **Perencana visual ketergantungan tugas dan jalur kritis, untuk proyek kuliah dan pekerjaan kelompok.** Susun tugas melalui form, lihat kapan setiap tugas bisa dimulai, lalu coba perubahan durasi sebelum menyimpannya. Tidak perlu akun, API key, koneksi internet saat dipakai, atau instalasi paket JavaScript.
 
 ![Timeline dan simulasi JalurProyek](docs/timeline.jpg)
